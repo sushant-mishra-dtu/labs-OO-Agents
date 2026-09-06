@@ -207,12 +207,19 @@ class TestBasicTurn:
         reaches disk.
         """
         prompt = "Explain: throughput ⇒ latency — “cached” 🚀"
+        stdout = "α ⇒ β\n"
         exporter.on_task(Task(prompt=prompt))
-        _drive_basic_codeact_turn(exporter, stdout="α ⇒ β\n")
+        _drive_basic_codeact_turn(exporter, stdout=stdout)
 
         assert exporter.path.exists(), "trajectory was dropped instead of written"
         loaded = Trajectory.model_validate_json(exporter.path.read_bytes().decode("utf-8"))
         assert loaded.steps[1].message == prompt
+        # Tool output reaches the file by a different route than the prompt,
+        # so assert it separately — otherwise the test still passes when the
+        # observation is dropped or mangled on the way through.
+        observation = loaded.steps[2].observation
+        assert observation is not None
+        assert stdout.rstrip("\n") in (observation.results[0].content or "")
 
 
 # ---------------------------------------------------------------------------
